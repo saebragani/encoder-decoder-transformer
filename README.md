@@ -1,2 +1,2 @@
-# Train an Encoder-Decoder Transformer to Translate from English to Farsi
+# Train an Encoder-Decoder Transformer to Translate Text from English to Farsi
 
