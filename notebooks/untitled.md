@@ -31,3 +31,10 @@ Test each module with dummy tensors as you go.
 ---
 
 The key insight is that `model.py` is completely self-contained — it only needs tensors of the right shape. So you can build and validate the entire architecture with `torch.randn(...)` before writing a single line of data pipeline code.
+
+
+**Droput**
+MultiHeadAttention — on attention scores after softmax
+ResidualConnection — on sublayer output before the residual add
+FeedForward — between the two linear layers
+PositionalEncoding — after adding PE to embeddings
