@@ -38,3 +38,66 @@ MultiHeadAttention — on attention scores after softmax
 ResidualConnection — on sublayer output before the residual add
 FeedForward — between the two linear layers
 PositionalEncoding — after adding PE to embeddings
+
+
+
+import torch
+import torch.nn as nn
+from torch.utils.data import Dataset
+
+BilingualDataset — class inheriting from Dataset
+
+__init__ — ~15 lines
+__len__ — ~2 lines
+__getitem__ — ~50 lines
+
+causal_mask — standalone function ~3 lines
+
+
+1. Tokenization — converts raw text into token IDs using the tokenizer
+2. Sequence preparation — pads or truncates each sequence to seq_len, and adds special tokens — SOS at the start, EOS at the end of the encoder input, and PAD tokens to fill remaining space
+3. Mask creation — builds two masks:
+
+encoder_mask — marks which positions are real tokens vs padding
+decoder_mask — combines the padding mask with the causal mask so the decoder can't see future tokens or padding
+
+The output of __getitem__ is a dictionary with everything the model needs for one training sample — encoder input, decoder input, both masks, the label, and the raw text for display during validation.
+causal_mask is a helper that builds the upper triangular matrix used to prevent the decoder from attending to future tokens.
+
+
+
+**train.py**
+
+3- get_all_sentences — generator that yields all sentences for a given language from the dataset
+
+12- get_or_build_tokenizer — loads tokenizer from file if it exists, otherwise builds and saves it
+
+34- get_ds — loads the dataset, builds tokenizers, splits into train/val, returns dataloaders
+
+3- get_model — calls build_transformer and returns the model
+
+89- train_model — the main training loop
+
+30- greedy_decode — generates translation token by token at inference time
+
+66- run_validation — runs the model on validation data and prints source/target/predicted
+
+
+
+Create a tokenizer instance with a tokenization model (Umar uses WordLevel which splits on words)
+Set a pre-tokenizer that defines how to split raw text before tokenization (Umar uses Whitespace which splits on spaces)
+Create a trainer with special tokens ([UNK], [PAD], [SOS], [EOS]) and minimum frequency threshold
+Train the tokenizer by feeding it all sentences from the dataset — this is where the vocabulary gets built automatically
+Save the tokenizer to disk so it doesn't need to be rebuilt every run
+
+
+
+encoder_input — tokenized source sentence with SOS, EOS, padding
+decoder_input — tokenized target sentence with SOS and padding
+encoder_mask — padding mask for encoder
+decoder_mask — combined padding and causal mask for decoder
+label — tokenized target sentence with EOS and padding (what the model should predict)
+src_text — raw source text string
+tgt_text — raw target text string
+
+
