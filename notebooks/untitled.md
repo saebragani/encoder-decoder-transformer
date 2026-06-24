@@ -84,20 +84,4 @@ causal_mask is a helper that builds the upper triangular matrix used to prevent 
 
 
 
-Create a tokenizer instance with a tokenization model (Umar uses WordLevel which splits on words)
-Set a pre-tokenizer that defines how to split raw text before tokenization (Umar uses Whitespace which splits on spaces)
-Create a trainer with special tokens ([UNK], [PAD], [SOS], [EOS]) and minimum frequency threshold
-Train the tokenizer by feeding it all sentences from the dataset — this is where the vocabulary gets built automatically
-Save the tokenizer to disk so it doesn't need to be rebuilt every run
-
-
-
-encoder_input — tokenized source sentence with SOS, EOS, padding
-decoder_input — tokenized target sentence with SOS and padding
-encoder_mask — padding mask for encoder
-decoder_mask — combined padding and causal mask for decoder
-label — tokenized target sentence with EOS and padding (what the model should predict)
-src_text — raw source text string
-tgt_text — raw target text string
-
 
