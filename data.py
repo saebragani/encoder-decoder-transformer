@@ -33,6 +33,20 @@ def create_or_load_tokenizer(dataset, language: str, file_path:str=None):
     return tokenizer
 
 
+def is_within_length_limit(
+    example,
+    source_tokenizer,
+    target_tokenizer,
+    source_language,
+    target_language,
+    max_source_content_tokens,
+    max_target_content_tokens
+):
+    source_len = len(source_tokenizer.encode(example["translation"][source_language]).ids)
+    target_len = len(target_tokenizer.encode(example["translation"][target_language]).ids)
+    return source_len <= max_source_content_tokens and target_len <= max_target_content_tokens
+
+    
 def train_tokenizers(
     dataset_path:str,
     dataset_name:str,
@@ -40,54 +54,93 @@ def train_tokenizers(
     target_language: str,
     source_file_path:str,
     target_file_path:str,
+    max_seq_len: int,
+    hf_token: str = None,
 ):
     dataset = load_dataset(
         path=dataset_path,
         name=dataset_name,
         split="train",
+        token=hf_token,
     )
     source_tokenizer = create_or_load_tokenizer(dataset, source_language, source_file_path)
     target_tokenizer = create_or_load_tokenizer(dataset, target_language, target_file_path)
 
+    original_size = len(dataset)
+    filtered_dataset = dataset.filter(
+        is_within_length_limit,
+        fn_kwargs={
+            "source_tokenizer": source_tokenizer,
+            "target_tokenizer": target_tokenizer,
+            "source_language": source_language,
+            "target_language": target_language,
+            "max_source_content_tokens": max_seq_len - 2, # leaving room for SOS and EOS
+            "max_target_content_tokens": max_seq_len - 1, # leaving room for EOS
+        }
+    )
+    filtered_size = len(filtered_dataset)
+    
+    print(f"Filtered dataset: {filtered_size:,} / {original_size:,} pairs kept "
+          f"({100 * filtered_size / original_size:.1f}%)")
+
     max_source_seq_len, max_target_seq_len = 0, 0
-    for data in dataset:
+    for data in filtered_dataset:
         source_token_ids = source_tokenizer.encode(data["translation"][source_language]).ids
         target_token_ids = target_tokenizer.encode(data["translation"][target_language]).ids
         
         max_source_seq_len = max(max_source_seq_len, len(source_token_ids))
         max_target_seq_len = max(max_target_seq_len, len(target_token_ids))
 
+    data = {
+        "source_tokenizer": source_tokenizer,
+        "target_tokenizer": target_tokenizer,
+        "source_seq_len": max_source_seq_len + 2,
+        "target_seq_len": max_target_seq_len + 1,
+        "source_vocab_size": source_tokenizer.get_vocab_size(),
+        "target_vocab_size": target_tokenizer.get_vocab_size(),
+    }
 
-    return source_tokenizer, target_tokenizer, max_source_seq_len + 2, max_target_seq_len + 1
+    return data
 
 
 def create_data_loader(
     dataset_path:str,
     dataset_name:str,
     split:str,
-    source_tokenizer: Tokenizer,
-    target_tokenizer: Tokenizer,
-    source_seq_len: int,
-    target_seq_len: int,
+    trained_tokens_dict: dict,
     source_language: str,
     target_language: str,
     batch_size: int,
     shuffle: bool,
+    hf_token: str = None,
 ):
     dataset = load_dataset(
         path=dataset_path,
         name=dataset_name,
         split=split,
+        token=hf_token,
+    )
+
+    filtered_dataset = dataset.filter(
+        is_within_length_limit,
+        fn_kwargs={
+            "source_tokenizer": trained_tokens_dict["source_tokenizer"],
+            "target_tokenizer": trained_tokens_dict["target_tokenizer"],
+            "source_language": source_language,
+            "target_language": target_language,
+            "max_source_content_tokens": trained_tokens_dict["source_seq_len"] - 2, # leaving room for SOS and EOS
+            "max_target_content_tokens": trained_tokens_dict["target_seq_len"] - 1, # leaving room for EOS
+        }
     )
 
     translation_dataset = TranslationDataset(
-        data=dataset,
-        source_seq_len=source_seq_len,
-        target_seq_len=target_seq_len,
+        data=filtered_dataset,
+        source_seq_len=trained_tokens_dict["source_seq_len"],
+        target_seq_len=trained_tokens_dict["target_seq_len"],
         source_language=source_language,
         target_language=target_language,
-        source_tokenizer=source_tokenizer,
-        target_tokenizer=target_tokenizer,
+        source_tokenizer=trained_tokens_dict["source_tokenizer"],
+        target_tokenizer=trained_tokens_dict["target_tokenizer"],
     )
     
     data_loader = DataLoader(
@@ -141,7 +194,7 @@ class TranslationDataset(Dataset):
         
         token_ids = sos_token_id_ls + token_ids + eos_token_id_ls
         if len(token_ids) > seq_len:
-            raise ValueError
+            raise ValueError(f"seq_len: {seq_len}, token_ids length: {len(token_ids)}")
 
         pad_token_id = tokenizer.token_to_id("<PAD>")
         token_ids = torch.tensor(token_ids + [pad_token_id] * (seq_len - len(token_ids)), dtype=torch.int64)

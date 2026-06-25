@@ -74,6 +74,11 @@ causal_mask is a helper that builds the upper triangular matrix used to prevent 
 
 34- get_ds — loads the dataset, builds tokenizers, splits into train/val, returns dataloaders
 
+
+
+
+
+
 3- get_model — calls build_transformer and returns the model
 
 89- train_model — the main training loop

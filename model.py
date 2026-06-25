@@ -136,8 +136,8 @@ class EncoderBlock(nn.Module):
         self.residual_connection1 = ResidualConnection(d_model, dropout)
         self.residual_connection2 = ResidualConnection(d_model, dropout)
 
-    def forward(self, x, padding_mask=None):
-        x = self.residual_connection1(x, lambda x: self.multi_head_attention(x, x, x, padding_mask))
+    def forward(self, x, encoder_mask=None):
+        x = self.residual_connection1(x, lambda x: self.multi_head_attention(x, x, x, encoder_mask))
         x = self.residual_connection2(x, self.feed_forward)
         return x
 
@@ -152,9 +152,9 @@ class DecoderBlock(nn.Module):
         self.residual_connection2 = ResidualConnection(d_model, dropout)
         self.residual_connection3 = ResidualConnection(d_model, dropout)
 
-    def forward(self, x, encoder_output, padding_mask, causal_mask):
-        x = self.residual_connection1(x, lambda x: self.multi_head_attention1(x, x, x, causal_mask))
-        x = self.residual_connection2(x, lambda x: self.multi_head_attention2(x, encoder_output, encoder_output, padding_mask))
+    def forward(self, x, encoder_output, encoder_mask, decoder_mask):
+        x = self.residual_connection1(x, lambda x: self.multi_head_attention1(x, x, x, decoder_mask))
+        x = self.residual_connection2(x, lambda x: self.multi_head_attention2(x, encoder_output, encoder_output, encoder_mask))
         x = self.residual_connection3(x, self.feed_forward)
         return x
 
@@ -171,31 +171,31 @@ class ProjectionLayer(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, source_vocab_size, target_vocab_size, seq_len, d_model, h, dropout, N_encoder, N_decoder):
+    def __init__(self, source_vocab_size, target_vocab_size, source_seq_len, target_seq_len, d_model, h, dropout, n_encoder, n_decoder):
         super().__init__()
         self.source_token_embedding = TokenEmbedding(source_vocab_size, d_model)
-        self.source_psition_encoding = PsitionEncoding(seq_len, d_model, dropout)
+        self.source_psition_encoding = PsitionEncoding(source_seq_len, d_model, dropout)
         self.target_token_embedding = TokenEmbedding(target_vocab_size, d_model)
-        self.target_psition_encoding = PsitionEncoding(seq_len, d_model, dropout)
+        self.target_psition_encoding = PsitionEncoding(target_seq_len, d_model, dropout)
         
-        self.encoder_module_list = nn.ModuleList([EncoderBlock(d_model, h, dropout) for _ in range(N_encoder)])
-        self.decoder_module_list = nn.ModuleList([DecoderBlock(d_model, h, dropout) for _ in range(N_decoder)])
+        self.encoder_module_list = nn.ModuleList([EncoderBlock(d_model, h, dropout) for _ in range(n_encoder)])
+        self.decoder_module_list = nn.ModuleList([DecoderBlock(d_model, h, dropout) for _ in range(n_decoder)])
         self.projection = ProjectionLayer(d_model, target_vocab_size)
         self.encoder_norm = LayerNorm(d_model)
         self.decoder_norm = LayerNorm(d_model)
         
-    def encode(self, x, padding_mask):
+    def encode(self, x, encoder_mask):
         x = self.source_token_embedding(x)
         x = self.source_psition_encoding(x)
         for encoder in self.encoder_module_list:
-            x = encoder(x, padding_mask)
+            x = encoder(x, encoder_mask)
         return self.encoder_norm(x)
 
-    def decode(self, x, encoder_output, padding_mask, causal_mask):
+    def decode(self, x, encoder_output, encoder_mask, decoder_mask):
         x = self.target_token_embedding(x)
         x = self.target_psition_encoding(x)
         for decoder in self.decoder_module_list:
-            x = decoder(x, encoder_output, padding_mask, causal_mask)
+            x = decoder(x, encoder_output, encoder_mask, decoder_mask)
         return self.decoder_norm(x)
 
     def project(self, x):
@@ -204,28 +204,30 @@ class TransformerBlock(nn.Module):
 
 
 def build_transformer(
-    source_vocab_size,
-    target_vocab_size,
-    seq_len,
-    d_model,
-    h,
-    dropout,
-    N_encoder,
-    N_decoder,
+    source_vocab_size: int,
+    target_vocab_size: int,
+    source_seq_len: int,
+    target_seq_len: int,
+    d_model: int,
+    h: int,
+    dropout: float,
+    n_encoder: int,
+    n_decoder: int,
 ):
 
     transformer = TransformerBlock(
         source_vocab_size=source_vocab_size,
         target_vocab_size=target_vocab_size,
-        seq_len=seq_len,
+        source_seq_len=source_seq_len,
+        target_seq_len=target_seq_len,
         d_model=d_model,
         h=h,
         dropout=dropout,
-        N_encoder=N_encoder,
-        N_decoder=N_decoder,
+        n_encoder=n_encoder,
+        n_decoder=n_decoder,
     )
 
-        # Initialize the parameters
+    # Initialize the parameters
     for p in transformer.parameters():
         if p.dim() > 1:
             nn.init.xavier_uniform_(p)
