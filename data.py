@@ -148,6 +148,7 @@ def create_data_loader(
         dataset=translation_dataset,
         batch_size=batch_size,
         shuffle=shuffle,
+        num_workers=0,
     )
     return data_loader
 

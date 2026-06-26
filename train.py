@@ -167,7 +167,7 @@ def run_validation(model, data_loader, target_tokenizer, target_seq_len, device,
 
 def train_model(
     config_file_path: str,
-    hf_token: str,
+    hf_token: str = None,
 ):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
@@ -270,7 +270,4 @@ def train_model(
 if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     config_file_path = "./config/parameters.yaml"
-    train_model(
-        config_file_path=config_file_path,
-        hf_token=hf_token,
-    )
+    train_model(config_file_path=config_file_path)
