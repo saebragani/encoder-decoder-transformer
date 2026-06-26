@@ -224,4 +224,6 @@ __marimo__/
 venv*/
 .vscode/
 .env
+outputs/
+notebooks/outputs/
 
