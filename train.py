@@ -100,7 +100,7 @@ def greedy_decoder(model, target_tokenizer, encoder_input, encoder_mask, device,
 
 
 
-def run_validation(model, data_loader, target_tokenizer, target_seq_len, device, print_msg, writer, global_step, max_num_val_data=None):
+def run_validation(model, data_loader, target_tokenizer, target_seq_len, device, print_msg, writer, global_step, max_num_val_steps=None):
     model.eval()
 
     try:
@@ -140,7 +140,7 @@ def run_validation(model, data_loader, target_tokenizer, target_seq_len, device,
             print_msg(f"{f'TARGET: ':>12}{target_sentence}")
             print_msg(f"{f'TRANSLATION: ':>12}{translation_sentence}")
 
-            if max_num_val_data is not None and i >= max_num_val_data:
+            if max_num_val_steps is not None and i >= max_num_val_steps:
                 print_msg('='*console_width)
                 break
 
@@ -252,7 +252,7 @@ def train_model(
             print_msg=lambda msg: batch_iterator.write(msg),
             writer=writer,
             global_step=global_step,
-            max_num_val_data=3,
+            max_num_val_steps=config["max_num_val_steps"],
         )
 
         model_file_name = f"{config['model_weights_dir']}/{config['model_basename']}_epoch_{epoch}.pt"
