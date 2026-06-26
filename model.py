@@ -32,7 +32,7 @@ class PsitionEncoding(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
-        x = x + self.position_encoding.unsqueeze(0) # (B, seq_len, d_model) + (1, seq_len, d_model) --> Pytorch broadcasting takes care of batch dimension
+        x = x + self.position_encoding.unsqueeze(0)[:, :x.shape[1], :] # (B, seq_len, d_model) + (1, seq_len, d_model) --> Pytorch broadcasting takes care of batch dimension
         return self.dropout(x)
 
 

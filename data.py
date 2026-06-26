@@ -15,11 +15,13 @@ def sentence_generator(dataset, language: str):
     for data in dataset:
         yield data["translation"][language]
 
-def create_or_load_tokenizer(dataset, language: str, file_path:str=None):
-    if file_path is not None:
-        if Path(file_path).exists():
-            tokenizer = Tokenizer.from_file(file_path)
-            return tokenizer
+def create_or_load_tokenizer(dataset, language: str, tokenizer_dir: str, file_name: str):
+    Path(tokenizer_dir).mkdir(parents=True, exist_ok=True)
+    file_path = str(Path(tokenizer_dir) / file_name)
+    
+    if Path(file_path).exists():
+        tokenizer = Tokenizer.from_file(file_path)
+        return tokenizer
     
     trainer = WordLevelTrainer(
         min_frequency=2,
@@ -52,8 +54,7 @@ def train_tokenizers(
     dataset_name:str,
     source_language: str,
     target_language: str,
-    source_file_path:str,
-    target_file_path:str,
+    tokenizer_dir: str,
     max_seq_len: int,
     hf_token: str = None,
 ):
@@ -63,8 +64,8 @@ def train_tokenizers(
         split="train",
         token=hf_token,
     )
-    source_tokenizer = create_or_load_tokenizer(dataset, source_language, source_file_path)
-    target_tokenizer = create_or_load_tokenizer(dataset, target_language, target_file_path)
+    source_tokenizer = create_or_load_tokenizer(dataset, source_language, tokenizer_dir, "source_tokenizer.json")
+    target_tokenizer = create_or_load_tokenizer(dataset, target_language, tokenizer_dir, "target_tokenizer.json")
 
     original_size = len(dataset)
     filtered_dataset = dataset.filter(
