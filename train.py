@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 import torchmetrics
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import os
 from tqdm import tqdm
 import warnings
@@ -15,8 +15,8 @@ from data import create_data_loader, train_tokenizers
 from config import ConfigLoader
 from helpers.common import latest_weights_file_path
 
-load_dotenv(dotenv_path=".env", override=True)
-hf_token = os.getenv("HF_TOKEN")
+# load_dotenv(dotenv_path=".env", override=True)
+# hf_token = os.getenv("HF_TOKEN")
 
 
 def prepare_model_data(
@@ -270,4 +270,7 @@ def train_model(
 if __name__ == '__main__':
     warnings.filterwarnings("ignore")
     config_file_path = "./config/parameters.yaml"
-    train_model(config_file_path=config_file_path)
+    train_model(
+        config_file_path=config_file_path,
+        # hf_token=hf_token,
+    )
