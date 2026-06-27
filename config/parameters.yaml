@@ -10,7 +10,7 @@ preload: latest
 tensorboard_log_dir: outputs/tensorboard
 train_batch_size: 32
 val_batch_size: 1
-max_num_val_steps: 500
+max_num_val_steps: 100
 d_model: 512
 num_heads: 8
 n_encoder: 6
