@@ -228,4 +228,4 @@ notebooks/outputs/
 
 outputs/local_run/
 outputs/model_weights/*
-
+!outputs/model_weights/.gitkeep
