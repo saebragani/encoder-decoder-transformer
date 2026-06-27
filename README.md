@@ -7,3 +7,6 @@ https://github.com/hkproj/pytorch-transformer
 
 ## Setup
 pip install -r requirements.txt
+
+## TODO
+Add inference

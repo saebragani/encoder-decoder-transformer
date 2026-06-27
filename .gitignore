@@ -225,7 +225,11 @@ venv*/
 .vscode/
 .env
 notebooks/outputs/
+notebooks/evaluate_results.ipynb
 
 outputs/local_run/
 outputs/model_weights/*
 !outputs/model_weights/.gitkeep
+
+outputs/tensorboard/*
+!outputs/tensorboard/.gitkeep
